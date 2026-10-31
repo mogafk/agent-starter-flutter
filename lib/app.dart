@@ -3,16 +3,15 @@ import 'package:livekit_components/livekit_components.dart' as components;
 import 'package:provider/provider.dart';
 
 import 'controllers/app_ctrl.dart';
-import 'screens/agent_screen.dart';
-import 'screens/welcome_screen.dart';
+import 'screens/join_screen.dart';
+import 'screens/room_screen.dart';
 import 'ui/color_pallette.dart' show LKColorPaletteLight, LKColorPaletteDark;
 import 'widgets/app_layout_switcher.dart';
-import 'widgets/session_error_banner.dart';
 
 final appCtrl = AppCtrl();
 
-class VoiceAssistantApp extends StatelessWidget {
-  const VoiceAssistantApp({super.key});
+class MeetApp extends StatelessWidget {
+  const MeetApp({super.key});
 
   ThemeData buildTheme({required bool isLight}) {
     final colorPallete = isLight ? LKColorPaletteLight() : LKColorPaletteDark();
@@ -58,37 +57,26 @@ class VoiceAssistantApp extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext ctx) => MultiProvider(
-    providers: [
-      ChangeNotifierProvider.value(value: appCtrl),
-      ChangeNotifierProvider.value(value: appCtrl.session),
-      ChangeNotifierProvider.value(value: appCtrl.roomContext),
-    ],
-    child: components.SessionContext(
-      session: appCtrl.session,
+  Widget build(BuildContext ctx) => ChangeNotifierProvider.value(
+    value: appCtrl,
+    // AppCtrl swaps in a new RoomContext after every call, so the provider below follows it.
+    child: Selector<AppCtrl, components.RoomContext>(
+      selector: (ctx, appCtrl) => appCtrl.roomContext,
+      builder: (ctx, roomContext, child) => ChangeNotifierProvider.value(
+        key: ObjectKey(roomContext),
+        value: roomContext,
+        child: child,
+      ),
       child: MaterialApp(
-        title: 'Voice Assistant',
+        title: 'Englishmans livekit',
         theme: buildTheme(isLight: true),
         darkTheme: buildTheme(isLight: false),
-        // themeMode: ThemeMode.dark,
-        home: Builder(
-          builder: (ctx) => Center(
-            child: Container(
-              constraints: BoxConstraints(maxWidth: 620),
-              child: Stack(
-                children: [
-                  Selector<AppCtrl, AppScreenState>(
-                    selector: (ctx, appCtx) => appCtx.appScreenState,
-                    builder: (ctx, screen, _) => AppLayoutSwitcher(
-                      frontBuilder: (ctx) => const WelcomeScreen(),
-                      backBuilder: (ctx) => const AgentScreen(),
-                      isFront: screen == AppScreenState.welcome,
-                    ),
-                  ),
-                  const SessionErrorBanner(),
-                ],
-              ),
-            ),
+        home: Selector<components.RoomContext, bool>(
+          selector: (ctx, roomCtx) => roomCtx.connected,
+          builder: (ctx, isConnected, _) => AppLayoutSwitcher(
+            frontBuilder: (ctx) => const JoinScreen(),
+            backBuilder: (ctx) => const RoomScreen(),
+            isFront: !isConnected,
           ),
         ),
       ),

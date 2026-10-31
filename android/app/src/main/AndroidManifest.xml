@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="Voice Assistant"
+        android:label="Englishmans livekit"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -24,7 +24,24 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Room links are handled by the app_links plugin, not by Flutter's router. -->
+            <meta-data android:name="flutter_deeplinking_enabled" android:value="false" />
+            <!-- Android App Links: verified via https://englishmans.duckdns.org/.well-known/assetlinks.json -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="englishmans.duckdns.org" />
+                <data android:pathPrefix="/rooms/" />
+            </intent-filter>
         </activity>
+        <!-- Keeps an ongoing call alive in the background, see CallService.kt -->
+        <service
+            android:name=".CallService"
+            android:exported="false"
+            android:stopWithTask="true"
+            android:foregroundServiceType="microphone|camera|mediaPlayback" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
@@ -42,7 +59,14 @@
             <data android:mimeType="text/plain"/>
         </intent>
     </queries>
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 /// Button shown when disconnected to start a new conversation
 class Button extends StatelessWidget {
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final bool isProgressing;
   final String text;
 

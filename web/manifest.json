@@ -1,11 +1,11 @@
 {
-    "name": "voice_assistant",
-    "short_name": "voice_assistant",
+    "name": "Englishmans livekit",
+    "short_name": "Englishmans",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "An AI voice assistant built with LiveKit",
+    "description": "Englishmans livekit",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
