@@ -6,6 +6,7 @@ import 'package:livekit_components/livekit_components.dart' as components;
 import 'package:provider/provider.dart';
 
 import '../services/call_service.dart';
+import '../widgets/call_controls.dart';
 
 class RoomScreen extends StatelessWidget {
   const RoomScreen({super.key});
@@ -42,10 +43,7 @@ class RoomScreen extends StatelessWidget {
               ),
             ),
             components.MediaDeviceContextBuilder(
-              builder: (ctx, roomCtx, deviceCtx) => const components.ControlBar(
-                chat: false,
-                screenShare: false,
-              ),
+              builder: (ctx, roomCtx, deviceCtx) => const CallControls(),
             ),
           ],
         ),
