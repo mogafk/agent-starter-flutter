@@ -24,23 +24,25 @@ class CallControls extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _RoundButton(
-                size: 76,
-                iconSize: 36,
+              _DeviceToggle(
                 icon: deviceCtx.microphoneOpened ? Icons.mic : Icons.mic_off,
                 isActive: deviceCtx.microphoneOpened,
                 tooltip: 'Microphone',
                 onPressed: () =>
                     deviceCtx.microphoneOpened ? deviceCtx.disableMicrophone() : deviceCtx.enableMicrophone(),
+                devices: deviceCtx.audioInputs ?? const [],
+                selectedDeviceId: deviceCtx.selectedAudioInputDeviceId,
+                onSelectDevice: deviceCtx.selectAudioInput,
               ),
               const SizedBox(width: 32),
-              _RoundButton(
-                size: 76,
-                iconSize: 36,
+              _DeviceToggle(
                 icon: deviceCtx.cameraOpened ? Icons.videocam : Icons.videocam_off,
                 isActive: deviceCtx.cameraOpened,
                 tooltip: 'Camera',
                 onPressed: () => deviceCtx.cameraOpened ? deviceCtx.disableCamera() : deviceCtx.enableCamera(),
+                devices: deviceCtx.videoInputs ?? const [],
+                selectedDeviceId: deviceCtx.selectedVideoInputDeviceId,
+                onSelectDevice: deviceCtx.selectVideoInput,
               ),
             ],
           ),
@@ -62,9 +64,13 @@ class CallControls extends StatelessWidget {
                 tooltip: 'Switch camera',
                 // Only meaningful while the camera is on.
                 onPressed: deviceCtx.cameraOpened && cameraPosition != null
-                    ? () => deviceCtx.switchCameraPosition(
-                        cameraPosition == sdk.CameraPosition.front ? sdk.CameraPosition.back : sdk.CameraPosition.front,
-                      )
+                    ? () {
+                        // Flipping picks a camera by facing, not by id, so the camera list can't mark one anymore.
+                        deviceCtx.selectedVideoInputDeviceId = null;
+                        deviceCtx.switchCameraPosition(
+                          cameraPosition == sdk.CameraPosition.front ? sdk.CameraPosition.back : sdk.CameraPosition.front,
+                        );
+                      }
                     : null,
               ),
               const SizedBox(width: 24),
@@ -82,6 +88,109 @@ class CallControls extends StatelessWidget {
   }
 }
 
+/// A large on/off toggle for a media device. When there is more than one device, a small
+/// arrow badge (or a long press on the button) opens a menu to pick which one to use.
+class _DeviceToggle extends StatelessWidget {
+  const _DeviceToggle({
+    required this.icon,
+    required this.isActive,
+    required this.tooltip,
+    required this.onPressed,
+    required this.devices,
+    required this.selectedDeviceId,
+    required this.onSelectDevice,
+  });
+
+  final IconData icon;
+  final bool isActive;
+  final String tooltip;
+  final VoidCallback onPressed;
+  final List<sdk.MediaDevice> devices;
+  final String? selectedDeviceId;
+  final void Function(sdk.MediaDevice device) onSelectDevice;
+
+  /// Android names cameras like "Camera 1, Facing back, Orientation 90"; show just the facing.
+  String _deviceLabel(sdk.MediaDevice device) {
+    final facing = RegExp(r'Facing (front|back|external)', caseSensitive: false).firstMatch(device.label);
+    final sameFacing = facing == null
+        ? 0
+        : devices.where((d) => d.label.toLowerCase().contains(facing[0]!.toLowerCase())).length;
+    return switch (facing?[1]?.toLowerCase()) {
+      // Phones with several back lenses list several "back" cameras; keep the number to tell them apart.
+      final side? when sameFacing > 1 => '${_capitalize(side)} camera ${device.deviceId}',
+      final side? => '${_capitalize(side)} camera',
+      _ => device.label.isNotEmpty ? device.label : 'Device ${device.deviceId}',
+    };
+  }
+
+  static String _capitalize(String s) => s[0].toUpperCase() + s.substring(1);
+
+  Future<void> _showDeviceMenu(BuildContext ctx) async {
+    final box = ctx.findRenderObject()! as RenderBox;
+    final overlay = Overlay.of(ctx).context.findRenderObject()! as RenderBox;
+    final device = await showMenu<sdk.MediaDevice>(
+      context: ctx,
+      position: RelativeRect.fromRect(
+        box.localToGlobal(Offset.zero, ancestor: overlay) & box.size,
+        Offset.zero & overlay.size,
+      ),
+      items: [
+        for (final device in devices)
+          CheckedPopupMenuItem(
+            value: device,
+            checked: device.deviceId == selectedDeviceId,
+            child: Text(_deviceLabel(device)),
+          ),
+      ],
+    );
+    if (device != null) onSelectDevice(device);
+  }
+
+  @override
+  Widget build(BuildContext ctx) {
+    final canSelect = devices.length > 1;
+    final button = _RoundButton(
+      size: 76,
+      iconSize: 36,
+      icon: icon,
+      isActive: isActive,
+      // A tooltip would take over the long press that opens the device menu.
+      tooltip: canSelect ? null : tooltip,
+      onPressed: onPressed,
+    );
+    if (!canSelect) return button;
+
+    return Semantics(
+      label: tooltip,
+      child: GestureDetector(
+        onLongPress: () => _showDeviceMenu(ctx),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            button,
+            Positioned(
+              right: -2,
+              bottom: -2,
+              child: Material(
+                color: Colors.grey.shade700,
+                shape: const CircleBorder(side: BorderSide(color: Colors.black, width: 2)),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: () => _showDeviceMenu(ctx),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Icon(Icons.expand_more, size: 20, color: Colors.white, semanticLabel: 'Choose $tooltip'),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _RoundButton extends StatelessWidget {
   const _RoundButton({
     required this.icon,
@@ -94,7 +203,7 @@ class _RoundButton extends StatelessWidget {
   });
 
   final IconData icon;
-  final String tooltip;
+  final String? tooltip;
   final VoidCallback? onPressed;
   final bool isActive;
   final Color? color;
